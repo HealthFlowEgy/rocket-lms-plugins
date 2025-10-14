@@ -15,6 +15,10 @@ This repository contains the Universal Plugins Bundle for Rocket LMS, a comprehe
 
 A complete payment gateway integration for HealthPay, a local Egyptian payment solution.
 
+### Rocket LMS Mobile App (Flutter)
+
+A comprehensive mobile application for Rocket LMS built with Flutter, providing native mobile experience for both Android and iOS platforms.
+
 **Features**:
 - GraphQL API integration
 - Wallet-based transactions
@@ -30,6 +34,7 @@ A complete payment gateway integration for HealthPay, a local Egyptian payment s
 - [HealthPay README](HealthPay/README.md) - Complete plugin overview and features
 - [Installation Guide](HealthPay/INSTALLATION.md) - Step-by-step installation instructions
 - [API Reference](HealthPay/API_REFERENCE.md) - Complete API documentation
+- [Mobile App README](mobile-app/README.md) - Mobile app documentation and setup
 
 ## Installation
 
@@ -42,6 +47,10 @@ Please refer to the PDF guides in the `Installation` directory:
 ### HealthPay Plugin
 
 See the [HealthPay Installation Guide](HealthPay/INSTALLATION.md) for detailed instructions.
+
+### Mobile App
+
+See the [Mobile App README](mobile-app/README.md) for setup and development instructions.
 
 ## Important Notes
 
@@ -69,6 +78,15 @@ rocket-lms-plugins/
 │   ├── app/                       # Application models
 │   ├── public/                    # Public files
 │   └── resources/                 # View templates
+├── mobile-app/                    # Rocket LMS Mobile App (Flutter)
+│   ├── android/                   # Android native code
+│   ├── ios/                       # iOS native code
+│   ├── lib/                       # Flutter/Dart source code
+│   ├── assets/                    # App assets
+│   ├── builds/                    # Pre-built APK
+│   ├── pubspec.yaml               # Dependencies
+│   ├── Documentation.pdf          # Mobile app documentation
+│   └── README.md                  # Mobile app guide
 ├── HealthPay/                     # HealthPay Payment Gateway Plugin
 │   ├── Controllers/               # Payment controllers
 │   ├── Migrations/                # Database migrations
@@ -125,6 +143,12 @@ For support and updates, please register your license in the CRM system.
 - **Rocket LMS Issues**: Visit CodeCanyon support forum
 
 ## Changelog
+
+### Version 1.0.2 (2025-10-14)
+- Added Rocket LMS Mobile App (Flutter)
+- Complete mobile application for Android and iOS
+- Pre-built APK included
+- Full source code with documentation
 
 ### Version 1.0.1 (2025-10-15)
 - Added HealthPay Payment Gateway Plugin
