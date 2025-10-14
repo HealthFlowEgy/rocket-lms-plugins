@@ -1,0 +1,59 @@
+{
+  "name": "HealthPay",
+  "version": "1.0.0",
+  "description": "HealthPay Payment Gateway Integration for Rocket LMS - Local Egyptian Payment Solution",
+  "author": "HealthFlow",
+  "type": "payment_channel",
+  "requires": {
+    "rocket_lms": ">=2.0.0",
+    "php": ">=8.0"
+  },
+  "settings": {
+    "enabled": {
+      "type": "boolean",
+      "default": false,
+      "label": "Enable HealthPay"
+    },
+    "mode": {
+      "type": "select",
+      "options": {
+        "sandbox": "Sandbox",
+        "live": "Live"
+      },
+      "default": "sandbox",
+      "label": "Mode"
+    },
+    "api_key": {
+      "type": "text",
+      "required": true,
+      "label": "API Key"
+    },
+    "api_secret": {
+      "type": "password",
+      "required": true,
+      "label": "API Secret"
+    },
+    "api_endpoint": {
+      "type": "select",
+      "options": {
+        "sandbox": "https://api.beta.healthpay.tech/graphql",
+        "production": "https://api.healthpay.tech/graphql"
+      },
+      "default": "sandbox",
+      "label": "API Endpoint"
+    }
+  },
+  "currencies": ["EGP"],
+  "logo": "/plugins/HealthPay/assets/logo.png",
+  "routes": {
+    "web": "Routes/web.php"
+  },
+  "migrations": [
+    "Migrations/2025_10_15_create_healthpay_settings_table.php",
+    "Migrations/2025_10_15_create_healthpay_transactions_table.php"
+  ],
+  "providers": [
+    "HealthPayServiceProvider"
+  ]
+}
+
