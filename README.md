@@ -1,8 +1,12 @@
-# Universal Plugins Bundle for Rocket LMS
+# Rocket LMS Complete Package
 
-This repository contains the Universal Plugins Bundle for Rocket LMS, a comprehensive collection of plugins and features designed to enhance the functionality of Rocket LMS.
+This repository contains the complete Rocket LMS package including the main Learning Management System, Universal Plugins Bundle, HealthPay Payment Gateway Plugin, and Mobile App (Flutter).
 
 ## Contents
+
+### Rocket LMS Main Application
+
+Complete Laravel-based Learning Management System with course management, quizzes, certificates, payment integration, and comprehensive admin panel.
 
 ### Original Plugin Bundle
 
@@ -52,6 +56,10 @@ See the [HealthPay Installation Guide](HealthPay/INSTALLATION.md) for detailed i
 
 See the [Mobile App README](mobile-app/README.md) for setup and development instructions.
 
+### Main LMS Application
+
+See the [LMS README](lms/README.md) for complete installation and configuration guide.
+
 ## Important Notes
 
 ⚠️ **Version Compatibility**: Ensure that the version of the plugin bundle matches the version of your Rocket LMS website to avoid compatibility issues.
@@ -73,6 +81,19 @@ See the [Mobile App README](mobile-app/README.md) for setup and development inst
 ```
 rocket-lms-plugins/
 ├── .tmp/                           # Temporary files
+├── lms/                            # Rocket LMS Main Application
+│   ├── app/                       # Laravel application core
+│   ├── config/                    # Configuration files
+│   ├── database/                  # Migrations and seeders
+│   ├── databases/                 # SQL database files
+│   │   ├── demo_db.sql           # Demo database with sample data
+│   │   └── empty_db.sql          # Empty database
+│   ├── public/                    # Public web root
+│   ├── resources/                 # Views and assets
+│   ├── routes/                    # Route definitions
+│   ├── storage/                   # Logs, cache, uploads
+│   ├── composer.json              # PHP dependencies
+│   └── README.md                  # LMS documentation
 ├── Documentation/                  # Original bundle documentation
 ├── Installation/                   # Original bundle installation files
 │   ├── app/                       # Application models
@@ -143,6 +164,13 @@ For support and updates, please register your license in the CRM system.
 - **Rocket LMS Issues**: Visit CodeCanyon support forum
 
 ## Changelog
+
+### Version 1.0.3 (2025-10-14)
+- Added Rocket LMS Main Application
+- Complete Laravel-based LMS with all features
+- Demo and empty database SQL files
+- Comprehensive admin panel and API
+- Multi-language support (94+ languages)
 
 ### Version 1.0.2 (2025-10-14)
 - Added Rocket LMS Mobile App (Flutter)
