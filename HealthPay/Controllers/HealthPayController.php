@@ -4,6 +4,8 @@ namespace Plugins\PaymentChannels\HealthPay\Controllers;
 
 use App\Http\Controllers\Controller;
 use Plugins\PaymentChannels\HealthPay\Services\HealthPayService;
+use Plugins\PaymentChannels\HealthPay\Models\HealthPaySetting;
+use Plugins\PaymentChannels\HealthPay\Models\HealthPayTransaction;
 use App\Models\Order;
 use App\Models\Accounting;
 use App\Models\PaymentChannel;
@@ -14,6 +16,12 @@ use Exception;
 class HealthPayController extends Controller
 {
     private $healthPayService;
+    
+    // Payment status constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_SUCCESS = 'success';
+    const STATUS_FAILED = 'failed';
+    const STATUS_CANCELLED = 'cancelled';
     
     public function __construct()
     {
@@ -45,7 +53,6 @@ class HealthPayController extends Controller
         ]);
         
         try {
-            // Save settings to database
             $this->saveSettings($request->all());
             
             return redirect()->back()->with('success', 'HealthPay settings updated successfully');
@@ -93,13 +100,11 @@ class HealthPayController extends Controller
             $orderId = $request->input('order_id');
             $order = Order::findOrFail($orderId);
             
-            // Check if order is already paid
             if ($order->status === 'paid') {
                 return redirect()->route('payment.success')
                     ->with('success', 'Order already paid');
             }
             
-            // Create payment request
             $paymentRequest = $this->healthPayService->createPaymentRequest(
                 $order->id,
                 $order->amount,
@@ -107,15 +112,12 @@ class HealthPayController extends Controller
                 "Payment for Order #{$order->id}"
             );
             
-            // Log transaction
-            $this->logTransaction($order, $paymentRequest, 'pending');
+            $this->logTransaction($order, $paymentRequest, self::STATUS_PENDING);
             
-            // Update order with transaction reference
             $order->update([
                 'reference_id' => $paymentRequest['createPaymentRequest']['id'] ?? null
             ]);
             
-            // Redirect to payment URL
             $paymentUrl = $paymentRequest['createPaymentRequest']['paymentUrl'] ?? null;
             
             if ($paymentUrl) {
@@ -148,7 +150,6 @@ class HealthPayController extends Controller
                 throw new Exception('Transaction ID not provided');
             }
             
-            // Check transaction status
             $transaction = $this->healthPayService->checkTransactionStatus($transactionId);
             
             $order = Order::where('reference_id', $referenceId)
@@ -184,7 +185,6 @@ class HealthPayController extends Controller
                 throw new Exception('Transaction ID not provided');
             }
             
-            // Verify transaction status
             $transaction = $this->healthPayService->checkTransactionStatus($transactionId);
             
             $order = Order::where('reference_id', $referenceId)
@@ -192,13 +192,11 @@ class HealthPayController extends Controller
                 ->firstOrFail();
             
             if ($transaction['transaction']['status'] === 'SUCCESS') {
-                // Update order status
                 $order->update([
                     'status' => 'paid',
                     'payment_data' => json_encode($transaction)
                 ]);
                 
-                // Create accounting record
                 Accounting::create([
                     'user_id' => $order->user_id,
                     'amount' => $order->amount,
@@ -209,10 +207,8 @@ class HealthPayController extends Controller
                     'description' => "Payment for order #{$order->id} via HealthPay"
                 ]);
                 
-                // Log successful transaction
-                $this->logTransaction($order, $transaction, 'success');
+                $this->logTransaction($order, $transaction, self::STATUS_SUCCESS);
                 
-                // Trigger post-payment actions
                 if (method_exists($order, 'handleSuccessfulPayment')) {
                     $order->handleSuccessfulPayment();
                 }
@@ -223,8 +219,7 @@ class HealthPayController extends Controller
             } else {
                 $order->update(['status' => 'failed']);
                 
-                // Log failed transaction
-                $this->logTransaction($order, $transaction, 'failed');
+                $this->logTransaction($order, $transaction, self::STATUS_FAILED);
                 
                 return redirect()->route('payment.failed')
                     ->with('error', 'Payment failed or cancelled');
@@ -244,7 +239,6 @@ class HealthPayController extends Controller
     public function webhook(Request $request)
     {
         try {
-            // Verify webhook signature
             $signature = $request->header('X-HealthPay-Signature');
             $payload = $request->getContent();
             
@@ -257,7 +251,6 @@ class HealthPayController extends Controller
             
             Log::info('HealthPay webhook received', ['event' => $data['event'] ?? 'unknown']);
             
-            // Process webhook based on event type
             switch ($data['event'] ?? '') {
                 case 'payment.success':
                     $this->handlePaymentSuccess($data);
@@ -286,7 +279,7 @@ class HealthPayController extends Controller
     /**
      * Handle successful payment webhook
      */
-    private function handlePaymentSuccess($data)
+    private function handlePaymentSuccess(array $data): void
     {
         $order = Order::where('reference_id', $data['referenceId'] ?? '')
             ->orWhere('id', $data['referenceId'] ?? '')
@@ -298,7 +291,6 @@ class HealthPayController extends Controller
                 'payment_data' => json_encode($data)
             ]);
             
-            // Create accounting record
             Accounting::create([
                 'user_id' => $order->user_id,
                 'amount' => $order->amount,
@@ -309,18 +301,18 @@ class HealthPayController extends Controller
                 'description' => "Payment for order #{$order->id} via HealthPay (Webhook)"
             ]);
             
+            $this->logTransaction($order, $data, self::STATUS_SUCCESS);
+            
             if (method_exists($order, 'handleSuccessfulPayment')) {
                 $order->handleSuccessfulPayment();
             }
-            
-            Log::info('Payment success processed via webhook', ['order_id' => $order->id]);
         }
     }
     
     /**
      * Handle failed payment webhook
      */
-    private function handlePaymentFailed($data)
+    private function handlePaymentFailed(array $data): void
     {
         $order = Order::where('reference_id', $data['referenceId'] ?? '')
             ->orWhere('id', $data['referenceId'] ?? '')
@@ -328,14 +320,14 @@ class HealthPayController extends Controller
         
         if ($order) {
             $order->update(['status' => 'failed']);
-            Log::info('Payment failure processed via webhook', ['order_id' => $order->id]);
+            $this->logTransaction($order, $data, self::STATUS_FAILED);
         }
     }
     
     /**
      * Handle refund webhook
      */
-    private function handleRefund($data)
+    private function handleRefund(array $data): void
     {
         $order = Order::where('reference_id', $data['referenceId'] ?? '')
             ->orWhere('id', $data['referenceId'] ?? '')
@@ -343,58 +335,82 @@ class HealthPayController extends Controller
         
         if ($order) {
             $order->update(['status' => 'refunded']);
-            
-            // Create refund accounting record
-            Accounting::create([
-                'user_id' => $order->user_id,
-                'amount' => -$order->amount,
-                'type' => 'expense',
-                'type_account' => 'asset',
-                'store_type' => Order::class,
-                'store_id' => $order->id,
-                'description' => "Refund for order #{$order->id} via HealthPay"
-            ]);
-            
-            Log::info('Refund processed via webhook', ['order_id' => $order->id]);
-        }
-    }
-    
-    /**
-     * Log transaction
-     */
-    private function logTransaction($order, $transactionData, $status)
-    {
-        try {
-            // This would save to healthpay_transactions table
-            // Implementation depends on your database structure
-            Log::info('HealthPay transaction logged', [
-                'order_id' => $order->id,
-                'status' => $status,
-                'data' => $transactionData
-            ]);
-        } catch (Exception $e) {
-            Log::error('Failed to log transaction', ['error' => $e->getMessage()]);
+            $this->logTransaction($order, $data, 'refunded');
         }
     }
     
     /**
      * Get settings from database
      */
-    private function getSettings()
+    private function getSettings(): array
     {
-        // This would fetch from database
-        // For now, return config values
-        return config('healthpay.settings');
+        try {
+            $setting = HealthPaySetting::first();
+            
+            if ($setting && $setting->settings) {
+                return is_array($setting->settings) 
+                    ? $setting->settings 
+                    : json_decode($setting->settings, true);
+            }
+        } catch (Exception $e) {
+            Log::warning('Could not fetch HealthPay settings', ['error' => $e->getMessage()]);
+        }
+        
+        return [
+            'enabled' => false,
+            'mode' => 'sandbox',
+            'api_key' => '',
+            'api_secret' => '',
+            'api_endpoint' => 'sandbox',
+            'webhook_secret' => ''
+        ];
     }
     
     /**
      * Save settings to database
      */
-    private function saveSettings($settings)
+    private function saveSettings(array $data): void
     {
-        // This would save to database
-        // Implementation depends on your settings storage approach
-        Log::info('HealthPay settings saved', ['settings' => $settings]);
+        HealthPaySetting::updateOrCreate(
+            ['id' => 1],
+            ['settings' => json_encode($data)]
+        );
+        
+        Log::info('HealthPay settings updated', ['mode' => $data['mode'] ?? 'unknown']);
+    }
+    
+    /**
+     * Log transaction to database
+     */
+    private function logTransaction(Order $order, array $data, string $status): void
+    {
+        try {
+            HealthPayTransaction::create([
+                'order_id' => $order->id,
+                'user_id' => $order->user_id,
+                'transaction_id' => $data['createPaymentRequest']['id'] ?? $data['transaction']['id'] ?? $data['id'] ?? null,
+                'amount' => $order->amount,
+                'currency' => 'EGP',
+                'status' => $status,
+                'request_data' => json_encode([
+                    'order_id' => $order->id,
+                    'amount' => $order->amount,
+                    'user_id' => $order->user_id
+                ]),
+                'response_data' => json_encode($data)
+            ]);
+            
+            Log::info('HealthPay transaction logged', [
+                'order_id' => $order->id,
+                'status' => $status
+            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Failed to log HealthPay transaction', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
 

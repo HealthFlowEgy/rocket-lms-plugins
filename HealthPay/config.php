@@ -62,9 +62,8 @@ return [
         'production' => 'https://portal.healthpay.tech'
     ],
     
-    'test_credentials' => [
-        'username' => 'beta.account@healthpay.tech',
-        'password' => 'BetaAcc@HealthPay2024'
-    ]
+    // Test credentials should be stored in .env file:
+    // HEALTHPAY_TEST_USERNAME=beta.account@healthpay.tech
+    // HEALTHPAY_TEST_PASSWORD=your_password
 ];
 
